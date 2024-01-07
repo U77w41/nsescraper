@@ -1,0 +1,4 @@
+setuptools
+pathlib
+pandas>=2.1.3
+twine==4.0.2
