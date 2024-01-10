@@ -8,7 +8,6 @@ import pathlib
 # Getting the file path
 HERE = pathlib.Path(__file__).parent.resolve()
 
-
 # Intra Day Index Data Scrapper
 def intraday_index(index_name:str,
                    tick = False,
@@ -49,7 +48,8 @@ def intraday_index(index_name:str,
                                    axis= 1 ,
                                    inplace= True)
             # Creating the datetime column
-            index_dataframe['DATETIME'] = index_dataframe['DATETIME'].apply(lambda x : datetime.fromtimestamp(x/1000 - 6*3600+30*60))
+            # index_dataframe['DATETIME'] = index_dataframe['DATETIME'].apply(lambda x : datetime.fromtimestamp(x/1000 - 6*3600+30*60))
+            index_dataframe['DATETIME'] = pd.to_datetime(index_dataframe['DATETIME'],unit='ms', origin='unix')
         # For error handeling
         except requests.exceptions.RequestException as e:
             raise SystemExit(e)
@@ -126,7 +126,8 @@ def intraday_stock(stock_name:str,
     except requests.exceptions.RequestException as e:
             raise SystemExit(e)
     comapny_spot_data.rename({0:"DATETIME",1:"Tick"}, axis= 1 , inplace= True)
-    comapny_spot_data['DATETIME'] = comapny_spot_data['DATETIME'].apply(lambda x : datetime.fromtimestamp(x/1000 - 6*3600+30*60))
+    # comapny_spot_data['DATETIME'] = comapny_spot_data['DATETIME'].apply(lambda x : datetime.fromtimestamp(x/1000 - 6*3600+30*60))
+    comapny_spot_data['DATETIME'] = pd.to_datetime(comapny_spot_data['DATETIME'],unit='ms', origin='unix')
     if tick:
         return comapny_spot_data
     else:
