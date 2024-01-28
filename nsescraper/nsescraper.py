@@ -103,7 +103,7 @@ def identifier_finder(name: str) -> str:
 def intraday_stock(stock_name:str,
                    tick = False,
                    candlestick = 1)->pd.DataFrame:
-    """This function scrapes current date's listed comapanies spot data for the given stock name
+    """This function scrapes current date's listed companies spot data for the given stock name
 
     Args:
         index_name (str): NSE listed stock name (For Example:- TCS, LICI, SBIN, RELIANCE etc.)
@@ -121,17 +121,17 @@ def intraday_stock(stock_name:str,
     }
     try:
         session.get("https://www.nseindia.com", headers=head)
-        comapny_spot_data = pd.DataFrame(session.get(f"https://www.nseindia.com/api/chart-databyindex?index={str.upper(stock_name)}", headers= head).json()['grapthData'])
+        company_spot_data = pd.DataFrame(session.get(f"https://www.nseindia.com/api/chart-databyindex?index={str.upper(stock_name)}", headers= head).json()['grapthData'])
         session.close()
     except requests.exceptions.RequestException as e:
             raise SystemExit(e)
-    comapny_spot_data.rename({0:"DATETIME",1:"Tick"}, axis= 1 , inplace= True)
-    # comapny_spot_data['DATETIME'] = comapny_spot_data['DATETIME'].apply(lambda x : datetime.fromtimestamp(x/1000 - 6*3600+30*60))
-    comapny_spot_data['DATETIME'] = pd.to_datetime(comapny_spot_data['DATETIME'],unit='ms', origin='unix')
+    company_spot_data.rename({0:"DATETIME",1:"Tick"}, axis= 1 , inplace= True)
+    # company_spot_data['DATETIME'] = company_spot_data['DATETIME'].apply(lambda x : datetime.fromtimestamp(x/1000 - 6*3600+30*60))
+    company_spot_data['DATETIME'] = pd.to_datetime(company_spot_data['DATETIME'],unit='ms', origin='unix')
     if tick:
-        return comapny_spot_data
+        return company_spot_data
     else:
-        comapny_spot_data = comapny_spot_data.set_index(comapny_spot_data['DATETIME'])
-        comapny_spot_data = comapny_spot_data[['Tick']]
-        comapny_spot_data = comapny_spot_data['Tick'].resample(f'{candlestick}Min').ohlc()
-        return comapny_spot_data.reset_index()
+        company_spot_data = company_spot_data.set_index(company_spot_data['DATETIME'])
+        company_spot_data = company_spot_data[['Tick']]
+        company_spot_data = company_spot_data['Tick'].resample(f'{candlestick}Min').ohlc()
+        return company_spot_data.reset_index()
