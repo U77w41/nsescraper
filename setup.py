@@ -6,7 +6,7 @@ HERE = pathlib.Path(__file__).parent.resolve()
 
 # Get the long description from the README file
 long_description = (HERE / 'README.md').read_text(encoding='utf-8')
-__version__ = '0.0.4'
+__version__ = '0.0.5'
 __maintainer__ = 'Ujjwal Chowdhury'
 
 
@@ -22,9 +22,14 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     packages=find_packages(),
+    classifiers=[
+    'Programming Language :: Python :: 3',
+    'License :: OSI Approved :: MIT License',
+    'Operating System :: OS Independent'],
     include_package_data = True,
+    python_requires='>=3.6'
     data_files=[
-        ('nsescraper',['nsescraper/nifty_indices.pickle']),
+        ('nsescraper',['nsescraper/nifty_indices.pickle','nsescraper/option_indices.pickle']),
     ],
     install_requires=['pandas','pytz'],
     tests_require=['pytest'],

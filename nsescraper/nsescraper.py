@@ -1,12 +1,13 @@
 # Importing Necessary Libraries
 import pandas as pd
 import requests
-from datetime import datetime 
+from datetime import datetime, timedelta
 from pytz import timezone
 import pickle
 import pathlib
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
+from io import StringIO
 # Getting the file path
 HERE = pathlib.Path(__file__).parent.resolve()
 
@@ -149,3 +150,62 @@ def intraday_stock(stock_name:str,
         company_spot_data = company_spot_data[['Tick']]
         company_spot_data = company_spot_data['Tick'].resample(f'{candlestick}Min').ohlc()
         return company_spot_data.reset_index()
+    
+    
+def historical_stock(stock_name:str,
+                     from_date=(datetime.today().date() - timedelta(days=365)).strftime("%d-%m-%Y"),
+                     to_date=datetime.today().date().strftime("%d-%m-%Y"))->pd.DataFrame:
+    """This function scraps historical stock data from NSE. Maximum historical data will be one year.
+
+    Args:
+        stock_name (str): Company/Stock name
+        from_date (str, optional): Starting date in "DD-MM-YYY" format. Defaults to today's date.
+        to_date (str, optional): Ending date in "DD-MM-YYY" format. Defaults to exact one year.
+
+    Returns:
+        pd.DataFrame:  Daily candlestick data for the input "stock_name".
+    """
+    # Getting the stock symbol
+    def symbol_finder(company_name:str) -> str:
+        company_name = company_name.replace(' ', '')
+        session = requests.Session()
+        max_retries = 5
+        backoff_factor = 0.5
+        retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504])
+        adapter = HTTPAdapter(max_retries=retry)
+        session.mount('https://', adapter)
+        head = {
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                          "Chrome/87.0.4280.88 Safari/537.36 "
+        }
+        search_url = 'https://www.nseindia.com/api/search/autocomplete?q={}'
+        try:
+            session.get('https://www.nseindia.com/', headers=head)
+            search_results = session.get(url=search_url.format(company_name), headers=head)
+            search_result = search_results.json()['symbols'][0]['symbol']
+            return str(search_result)
+        except requests.exceptions.RequestException as e:
+            raise SystemExit(e)
+        except (IndexError, KeyError) as e:
+            raise ValueError("Error: Symbol not found or invalid response from server. Please try again.") from None
+        finally:
+            session.close()
+    # Getting the stock's symbol
+    company = symbol_finder(stock_name)
+    session = requests.Session()
+    max_retries = 10
+    backoff_factor = 0.5
+    retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504])
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('https://', adapter)
+    head = {
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                      "Chrome/87.0.4280.88 Safari/537.36 "
+    }
+    session.get("https://www.nseindia.com", headers=head)
+    session.get("https://www.nseindia.com/get-quotes/equity?symbol=" + company, headers=head)  # to save cookies
+    session.get("https://www.nseindia.com/api/historical/cm/equity?symbol="+company, headers=head)
+    url = "https://www.nseindia.com/api/historical/cm/equity?symbol=" + company + "&series=[%22EQ%22]&from=" + from_date + "&to=" + to_date + "&csv=true"
+    webdata = session.get(url=url, headers=head)
+    company_historical_dataframe = pd.read_csv(StringIO(webdata.text[3:]))
+    return company_historical_dataframe
