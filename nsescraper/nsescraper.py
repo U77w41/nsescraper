@@ -5,6 +5,8 @@ from datetime import datetime
 from pytz import timezone
 import pickle
 import pathlib
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 # Getting the file path
 HERE = pathlib.Path(__file__).parent.resolve()
 
@@ -29,7 +31,12 @@ def intraday_index(index_name:str,
     if index_name.upper() in nifty_indices:
         try:
             # Creating a session object
-            session = requests.session()
+            session = requests.Session()
+            max_retries = 10
+            backoff_factor = 0.5
+            retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504])
+            adapter = HTTPAdapter(max_retries=retry)
+            session.mount('https://', adapter)
             # Initializing the header
             head = {
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -69,36 +76,6 @@ def intraday_index(index_name:str,
 class ValueError(Exception):
     pass
 
-def identifier_finder(name: str) -> str:
-    name = name.replace(' ', '')
-    session = requests.session()
-    head = {
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-                      "Chrome/87.0.4280.88 Safari/537.36 "
-    }
-    search_url = 'https://www.nseindia.com/api/search/autocomplete?q={}'
-    get_details = 'https://www.nseindia.com/api/quote-equity?symbol={}'
-
-    try:
-        session.get('https://www.nseindia.com/', headers=head)
-        search_results = session.get(url=search_url.format(name), headers=head)
-        search_result = search_results.json()['symbols'][0]['symbol']
-    except requests.exceptions.RequestException as e:
-        raise SystemExit(e)
-    except (IndexError, KeyError) as e:
-        raise ValueError("Error: Symbol not found or invalid response from server. Please try again.") from None
-    finally:
-        session.close()
-
-    company_details = session.get(url=get_details.format(search_result), headers=head)
-
-    try:
-        identifier = company_details.json()['info']['identifier']
-    except KeyError as e:
-        raise ValueError(f"Error: Unable to retrieve company identifier from server response. Please try again.")
-
-    return identifier
-
 # Intraday stock data scrapper
 def intraday_stock(stock_name:str,
                    tick = False,
@@ -113,8 +90,45 @@ def intraday_stock(stock_name:str,
     Returns:
         pd.DataFrame: Intra Day stock data
     """
+    # Creating the identifier_finder function
+    def identifier_finder(name: str) -> str:
+        name = name.replace(' ', '')
+        session = requests.Session()
+        max_retries = 3
+        backoff_factor = 0.5
+        retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504])
+        adapter = HTTPAdapter(max_retries=retry)
+        session.mount('https://', adapter)
+        head = {
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                          "Chrome/87.0.4280.88 Safari/537.36 "
+        }
+        search_url = 'https://www.nseindia.com/api/search/autocomplete?q={}'
+        get_details = 'https://www.nseindia.com/api/quote-equity?symbol={}'
+        try:
+            session.get('https://www.nseindia.com/', headers=head)
+            search_results = session.get(url=search_url.format(name), headers=head)
+            search_result = search_results.json()['symbols'][0]['symbol']
+        except requests.exceptions.RequestException as e:
+            raise SystemExit(e)
+        except (IndexError, KeyError) as e:
+            raise ValueError("Error: Symbol not found or invalid response from server. Please try again.") from None
+        finally:
+            session.close()
+        company_details = session.get(url=get_details.format(search_result), headers=head)
+        try:
+            identifier = company_details.json()['info']['identifier']
+        except KeyError as e:
+            raise ValueError("Error: Unable to retrieve company identifier from server response.\nPlease try again with valid stock name") from None
+        return identifier
+    # Starting the actual function call
     stock_name = identifier_finder(stock_name)
-    session = requests.session()
+    session = requests.Session()
+    max_retries = 10
+    backoff_factor = 0.5
+    retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504])
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('https://', adapter)
     head = {
     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                   "Chrome/87.0.4280.88 Safari/537.36 "
