@@ -1,14 +1,15 @@
-```bash
+<!-- ```text
 
 ███    ██ ███████ ███████ ███████  ██████ ██████   █████  ██████  ███████ ██████  
 ████   ██ ██      ██      ██      ██      ██   ██ ██   ██ ██   ██ ██      ██   ██ 
 ██ ██  ██ ███████ █████   ███████ ██      ██████  ███████ ██████  █████   ██████  
 ██  ██ ██      ██ ██           ██ ██      ██   ██ ██   ██ ██      ██      ██   ██ 
 ██   ████ ███████ ███████ ███████  ██████ ██   ██ ██   ██ ██      ███████ ██   ██ 
-                                                                                  
-                                                                                  
-
-```
+                                                                            
+``` -->
+<div align="center">
+	<img src="nsescraper/nsescraper.svg" />
+</div>
 <p align="center">
   <a href="https://pypi.org/project/nsescraper"><img alt="PyPI Version" src="https://img.shields.io/pypi/v/nsescraper.svg?maxAge=86400" /></a>
   <a href="https://pypi.org/project/nsescraper"><img alt="Python Versions" src="https://img.shields.io/pypi/pyversions/nsescraper.svg?maxAge=86400" /></a>
