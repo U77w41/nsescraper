@@ -27,11 +27,11 @@ setup(
     'License :: OSI Approved :: MIT License',
     'Operating System :: OS Independent'],
     include_package_data = True,
-    python_requires='>=3.6'
+    python_requires='>=3.6',
     data_files=[
         ('nsescraper',['nsescraper/nifty_indices.pickle','nsescraper/option_indices.pickle','nsescraper/nsescraper.svg']),
     ],
-    install_requires=['pandas','pytz','urllib3',''],
+    install_requires=['pandas','pytz','urllib3'],
     tests_require=['pytest'],
     keywords= ['python','NSE','NIFTY','scraping']
 )
