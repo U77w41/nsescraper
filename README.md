@@ -8,7 +8,7 @@
                                                                             
 ``` -->
 <div align="center">
-	<img src="nsescraper/nsescraper.svg" />
+	<img src="https://raw.githubusercontent.com/U77w41/nsescraper/e9f646316e88cabc14178279459e3066a5fcf5a9/nsescraper/nsescraper.svg" />
 </div>
 <p align="center">
   <a href="https://pypi.org/project/nsescraper"><img alt="PyPI Version" src="https://img.shields.io/pypi/v/nsescraper.svg?maxAge=86400" /></a>
@@ -76,10 +76,10 @@ intraday_stock("Zomato", candlestick= 69)
 
 To scrap historical nse index/stock data
 
-'''python
+```python
 historical_index('NIFTY 50')
-'''
+```
 
-'''python
+```python
 historical_stock('ABB')
-'''
+```
