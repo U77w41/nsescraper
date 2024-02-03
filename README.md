@@ -73,3 +73,13 @@ intraday_index("nifty energy", candlestick= 10)
 ```python
 intraday_stock("Zomato", candlestick= 69)
 ```
+
+To scrap historical nse index/stock data
+
+'''python
+historical_index('NIFTY 50')
+'''
+
+'''python
+historical_stock('ABB')
+'''

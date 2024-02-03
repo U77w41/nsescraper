@@ -69,7 +69,6 @@ def intraday_index(index_name:str,
             index_dataframe = index_dataframe[['Tick']]
             index_dataframe = index_dataframe['Tick'].resample(f'{candlestick}Min').ohlc()
             return index_dataframe.reset_index()
-    # Printing the errors  
     else:
         print(f"""Ignoring further execution for '{index_name}'. Not a valid index name !!!!!.\nPlease try amonng these: {sorted(nifty_indices)}""")
         
@@ -202,10 +201,64 @@ def historical_stock(stock_name:str,
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                       "Chrome/87.0.4280.88 Safari/537.36 "
     }
-    session.get("https://www.nseindia.com", headers=head)
-    session.get("https://www.nseindia.com/get-quotes/equity?symbol=" + company, headers=head)  # to save cookies
-    session.get("https://www.nseindia.com/api/historical/cm/equity?symbol="+company, headers=head)
-    url = "https://www.nseindia.com/api/historical/cm/equity?symbol=" + company + "&series=[%22EQ%22]&from=" + from_date + "&to=" + to_date + "&csv=true"
-    webdata = session.get(url=url, headers=head)
-    company_historical_dataframe = pd.read_csv(StringIO(webdata.text[3:]))
-    return company_historical_dataframe
+    try:
+        session.get("https://www.nseindia.com", headers=head)
+        session.get("https://www.nseindia.com/get-quotes/equity?symbol=" + company, headers=head)  # to save cookies
+        session.get("https://www.nseindia.com/api/historical/cm/equity?symbol="+company, headers=head)
+        url = "https://www.nseindia.com/api/historical/cm/equity?symbol=" + company + "&series=[%22EQ%22]&from=" + from_date + "&to=" + to_date + "&csv=true"
+        webdata = session.get(url=url, headers=head)
+        company_historical_dataframe = pd.read_csv(StringIO(webdata.text[3:]))
+        return company_historical_dataframe
+    except requests.exceptions.RequestException as e:
+            raise SystemExit(e)
+
+def historical_index(index_name:str,
+                     from_date = str((datetime.today().date() - timedelta(days=365)).strftime("%d-%m-%Y")),
+                     to_date = str((datetime.today().strftime("%d-%m-%Y"))))->pd.DataFrame:
+    """This function scraps historical index data from NSE. Maximum historical data will be one year.
+
+    Args:
+        index_name (str): NSE Index name (For Example:- NIFTY 50, NIFTY BANK, NIFTY NEXT 50, NIFTY FINANCIAL SERVICES, NIFTY MIDCAP SELECT.)
+        from_date (str, optional): Starting date in "DD-MM-YYY" format. Defaults to today's date.
+        to_date (str, optional): Ending date in "DD-MM-YYY" format. Defaults to exact one year.
+
+    Returns:
+        pd.DataFrame:  Daily candlestick data for the input "index_name".
+    """
+    # Loading the Nifty Indices list
+    with open( HERE /'nifty_indices.pickle', 'rb') as file:
+        nifty_indices = pickle.load(file)
+    if index_name.upper() in nifty_indices:
+        try:
+            session = requests.Session()
+            max_retries = 5
+            backoff_factor = 0.5
+            retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504])
+            adapter = HTTPAdapter(max_retries=retry)
+            session.mount('https://', adapter)
+            head = {
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                              "Chrome/87.0.4280.88 Safari/537.36 "
+            }
+            index_name = index_name.upper()
+            index_name = index_name.replace(' ', '%20')
+            index_name = index_name.replace('-', '%20')
+            session.get("https://www.nseindia.com", headers=head)
+            index_data_json = session.get(
+                url="https://www.nseindia.com/api/historical/indicesHistory?indexType=" + index_name +
+                    "&from=" + from_date + "&to=" + to_date,
+                headers=head)
+            output_dataframe = pd.DataFrame(index_data_json.json()['data']['indexCloseOnlineRecords'])
+            output_dataframe.rename({'EOD_INDEX_NAME':'INDEX_NAME',
+                                     'EOD_OPEN_INDEX_VAL':'open',
+                                     'EOD_HIGH_INDEX_VAL':'high',
+                                     'EOD_LOW_INDEX_VAL':'low',
+                                     'EOD_CLOSE_INDEX_VAL':'close',
+                                     'EOD_TIMESTAMP':'Date'},
+                                    axis=1,
+                                    inplace= True)
+            return output_dataframe.drop(['_id','TIMESTAMP'], axis= 1)
+        except requests.exceptions.RequestException as e:
+            raise SystemExit(e)
+    else:
+        print(f"""Ignoring further execution for '{index_name}'. Not a valid index name !!!!!.\nPlease try amonng these: {sorted(nifty_indices)}""")
