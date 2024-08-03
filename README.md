@@ -15,7 +15,7 @@
   <a href="https://pypi.org/project/nsescraper"><img alt="Python Versions" src="https://img.shields.io/pypi/pyversions/nsescraper.svg?maxAge=86400" /></a>
 </p>
 
-**nsescraper** is an open-source python package to clean raw text data.
+**nsescraper** is an open-source python package to scrap data from nseindia.com.
 
 ## Installation
 
