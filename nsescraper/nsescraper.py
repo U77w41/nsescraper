@@ -28,46 +28,35 @@ def intraday_index(index_name:str,
     # Loading the Nifty Indices list
     with open( HERE /'nifty_indices.pickle', 'rb') as file:
         nifty_indices = pickle.load(file)
-    
     if index_name.upper() in nifty_indices:
         try:
-            # Creating a session object
             session = requests.Session()
             max_retries = 10
             backoff_factor = 0.5
             retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504])
             adapter = HTTPAdapter(max_retries=retry)
             session.mount('https://', adapter)
-            # Initializing the header
             head = {
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                           "Chrome/87.0.4280.88 Safari/537.36 "
             }
-            # Connecting to nse india website
             session.get("https://www.nseindia.com",
                         headers=head)
-            # Downloading the current tick data
             index_dataframe = pd.DataFrame(session.get(f"https://www.nseindia.com/api/chart-databyindex?index={str.upper(index_name)}&indices=true",
                                                        headers= head).json()['grapthData'])
-            # Closing the connection
             session.close()
-            # Renaming the index names
-            index_dataframe.rename({0:"DATETIME",1:"Tick"},
+            index_dataframe.rename({0:"timestamp",1:"ltp"},
                                    axis= 1 ,
                                    inplace= True)
-            # Creating the datetime column
-            # index_dataframe['DATETIME'] = index_dataframe['DATETIME'].apply(lambda x : datetime.fromtimestamp(x/1000 - 6*3600+30*60))
-            index_dataframe['DATETIME'] = pd.to_datetime(index_dataframe['DATETIME'],unit='ms', origin='unix')
-        # For error handeling
+            index_dataframe['timestamp'] = pd.to_datetime(index_dataframe['timestamp'],unit='ms', origin='unix')
         except requests.exceptions.RequestException as e:
             raise SystemExit(e)
-        # Return conditions
         if tick:
-            return index_dataframe
+            return index_dataframe[["timestamp","ltp"]]
         else:
-            index_dataframe = index_dataframe.set_index(index_dataframe['DATETIME'])
-            index_dataframe = index_dataframe[['Tick']]
-            index_dataframe = index_dataframe['Tick'].resample(f'{candlestick}Min').ohlc()
+            index_dataframe = index_dataframe.set_index(index_dataframe['timestamp'])
+            index_dataframe = index_dataframe[['ltp']]
+            index_dataframe = index_dataframe['ltp'].resample(f'{candlestick}Min').ohlc()
             return index_dataframe.reset_index()
     else:
         print(f"""Ignoring further execution for '{index_name}'. Not a valid index name !!!!!.\nPlease try amonng these: {sorted(nifty_indices)}""")
@@ -79,7 +68,7 @@ class ValueError(Exception):
 # Intraday stock data scrapper
 def intraday_stock(stock_name:str,
                    tick = False,
-                   candlestick = 1)->pd.DataFrame:
+                   candlestick:int = 1)->pd.DataFrame:
     """This function scrapes current date's listed companies spot data for the given stock name
 
     Args:
@@ -90,7 +79,6 @@ def intraday_stock(stock_name:str,
     Returns:
         pd.DataFrame: Intra Day stock data
     """
-    # Creating the identifier_finder function
     def identifier_finder(name: str) -> str:
         name = name.replace(' ', '')
         session = requests.Session()
@@ -121,7 +109,6 @@ def intraday_stock(stock_name:str,
         except KeyError as e:
             raise ValueError("Error: Unable to retrieve company identifier from server response.\nPlease try again with valid stock name") from None
         return identifier
-    # Starting the actual function call
     stock_name = identifier_finder(stock_name)
     session = requests.Session()
     max_retries = 10
@@ -139,21 +126,22 @@ def intraday_stock(stock_name:str,
         session.close()
     except requests.exceptions.RequestException as e:
             raise SystemExit(e)
-    company_spot_data.rename({0:"DATETIME",1:"Tick"}, axis= 1 , inplace= True)
-    # company_spot_data['DATETIME'] = company_spot_data['DATETIME'].apply(lambda x : datetime.fromtimestamp(x/1000 - 6*3600+30*60))
-    company_spot_data['DATETIME'] = pd.to_datetime(company_spot_data['DATETIME'],unit='ms', origin='unix')
+    company_spot_data.rename({0:"timestamp",1:"ltp"}, axis= 1 , inplace= True)
+    company_spot_data['timestamp'] = pd.to_datetime(company_spot_data['timestamp'],unit='ms', origin='unix')
     if tick:
         return company_spot_data
     else:
-        company_spot_data = company_spot_data.set_index(company_spot_data['DATETIME'])
-        company_spot_data = company_spot_data[['Tick']]
-        company_spot_data = company_spot_data['Tick'].resample(f'{candlestick}Min').ohlc()
+        company_spot_data = company_spot_data.set_index(company_spot_data['timestamp'])
+        company_spot_data = company_spot_data[['ltp']]
+        company_spot_data = company_spot_data['ltp'].resample(f'{candlestick}Min').ohlc()
         return company_spot_data.reset_index()
     
     
 def historical_stock(stock_name:str,
-                     from_date=(datetime.today().date() - timedelta(days=365)).strftime("%d-%m-%Y"),
-                     to_date=datetime.today().date().strftime("%d-%m-%Y"))->pd.DataFrame:
+                     from_date:str = (datetime.today().date() 
+                                      - timedelta(days=365)).strftime("%d-%m-%Y"),
+                     to_date:str   =  datetime.today().date().strftime("%d-%m-%Y")
+                     ) -> pd.DataFrame:
     """This function scraps historical stock data from NSE. Maximum historical data will be one year.
 
     Args:
@@ -164,14 +152,15 @@ def historical_stock(stock_name:str,
     Returns:
         pd.DataFrame:  Daily candlestick data for the input "stock_name".
     """
-    # Getting the stock symbol
     def symbol_finder(company_name:str) -> str:
-        company_name = company_name.replace(' ', '')
-        session = requests.Session()
-        max_retries = 5
+        company_name   = company_name.replace(' ', '')
+        session        = requests.Session()
+        max_retries    = 5
         backoff_factor = 0.5
-        retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504])
-        adapter = HTTPAdapter(max_retries=retry)
+        retry          = Retry(total             = max_retries,
+                               backoff_factor    = backoff_factor,
+                               status_forcelist  = [500, 502, 503, 504])
+        adapter        = HTTPAdapter(max_retries = retry)
         session.mount('https://', adapter)
         head = {
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -179,9 +168,11 @@ def historical_stock(stock_name:str,
         }
         search_url = 'https://www.nseindia.com/api/search/autocomplete?q={}'
         try:
-            session.get('https://www.nseindia.com/', headers=head)
-            search_results = session.get(url=search_url.format(company_name), headers=head)
-            search_result = search_results.json()['symbols'][0]['symbol']
+            session.get('https://www.nseindia.com/',
+                        headers = head)
+            search_results = session.get(url     = search_url.format(company_name),
+                                         headers = head)
+            search_result  = search_results.json()['symbols'][0]['symbol']
             return str(search_result)
         except requests.exceptions.RequestException as e:
             raise SystemExit(e)
@@ -189,25 +180,48 @@ def historical_stock(stock_name:str,
             raise ValueError("Error: Symbol not found or invalid response from server. Please try again.") from None
         finally:
             session.close()
-    # Getting the stock's symbol
-    company = symbol_finder(stock_name)
-    session = requests.Session()
-    max_retries = 10
+    company        = symbol_finder(stock_name)
+    session        = requests.Session()
+    max_retries    = 10
     backoff_factor = 0.5
-    retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504])
-    adapter = HTTPAdapter(max_retries=retry)
+    retry          = Retry(total             = max_retries,
+                           backoff_factor    = backoff_factor,
+                           status_forcelist  = [500, 502, 503, 504])
+    adapter        = HTTPAdapter(max_retries = retry)
     session.mount('https://', adapter)
     head = {
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                       "Chrome/87.0.4280.88 Safari/537.36 "
     }
     try:
-        session.get("https://www.nseindia.com", headers=head)
-        session.get("https://www.nseindia.com/get-quotes/equity?symbol=" + company, headers=head)  # to save cookies
-        session.get("https://www.nseindia.com/api/historical/cm/equity?symbol="+company, headers=head)
-        url = "https://www.nseindia.com/api/historical/cm/equity?symbol=" + company + "&series=[%22EQ%22]&from=" + from_date + "&to=" + to_date + "&csv=true"
-        webdata = session.get(url=url, headers=head)
-        company_historical_dataframe = pd.read_csv(StringIO(webdata.text[3:]))
+        session.get("https://www.nseindia.com",
+                    headers = head)
+        session.get("https://www.nseindia.com/get-quotes/equity?symbol=" 
+                    + company, 
+                    headers = head)  # to save cookies
+        session.get("https://www.nseindia.com/api/historical/cm/equity?symbol="
+                    +company,
+                    headers = head)
+        url     = ("https://www.nseindia.com/api/historical/cm/equity?symbol=" 
+                   + company 
+                   + "&series=[%22EQ%22]&from=" 
+                   + from_date 
+                   + "&to=" 
+                   + to_date 
+                   + "&csv=true")
+        webdata = session.get(url = url,
+                              headers = head)
+        company_historical_dataframe         = pd.read_csv(StringIO(webdata.text[3:]))
+        company_historical_dataframe.columns = [str(x).lower().replace(' ','') for x in company_historical_dataframe.columns]
+        company_historical_dataframe['date'] = pd.to_datetime(company_historical_dataframe['date'],
+                                                              format="%d-%b-%Y")
+        company_historical_dataframe[['volume', 'value','nooftrades']] = company_historical_dataframe[['volume',
+                                                                                                       'value',
+                                                                                                       'nooftrades']
+                                                                                                      ].apply(
+                                                                                                                lambda x: pd.to_numeric(x.str.replace(',', '')
+                                                                                                                                        )
+                                                                                                            )
         return company_historical_dataframe
     except requests.exceptions.RequestException as e:
             raise SystemExit(e)
@@ -249,15 +263,18 @@ def historical_index(index_name:str,
                     "&from=" + from_date + "&to=" + to_date,
                 headers=head)
             output_dataframe = pd.DataFrame(index_data_json.json()['data']['indexCloseOnlineRecords'])
-            output_dataframe.rename({'EOD_INDEX_NAME':'INDEX_NAME',
+            output_dataframe.rename({'EOD_INDEX_NAME':'index_name',
                                      'EOD_OPEN_INDEX_VAL':'open',
                                      'EOD_HIGH_INDEX_VAL':'high',
                                      'EOD_LOW_INDEX_VAL':'low',
                                      'EOD_CLOSE_INDEX_VAL':'close',
-                                     'EOD_TIMESTAMP':'Date'},
+                                     'EOD_TIMESTAMP':'date'},
                                     axis=1,
                                     inplace= True)
-            return output_dataframe.drop(['_id','TIMESTAMP'], axis= 1)
+            output_dataframe['date'] = pd.to_datetime(output_dataframe['date'],
+                                                      format="%d-%b-%Y")
+            return output_dataframe.drop(['_id','TIMESTAMP'], 
+                                         axis= 1)
         except requests.exceptions.RequestException as e:
             raise SystemExit(e)
     else:
