@@ -2,3 +2,6 @@ build
 dist
 nsescraper.egg-info
 nsescraper/test.ipynb
+.vscode/
+.pytest_cache/
+.lprof/
