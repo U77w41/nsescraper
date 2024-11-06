@@ -5,3 +5,5 @@ nsescraper/test.ipynb
 .vscode/
 .pytest_cache/
 .lprof/
+nsescraper/test_nsescraper.py
+nsescraper/__pycache__

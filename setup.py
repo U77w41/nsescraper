@@ -6,7 +6,7 @@ HERE = pathlib.Path(__file__).parent.resolve()
 
 # Get the long description from the README file
 long_description = (HERE / 'README.md').read_text(encoding='utf-8')
-__version__ = '0.0.7'
+__version__ = '0.0.8'
 __maintainer__ = 'Ujjwal Chowdhury'
 
 
@@ -31,7 +31,7 @@ setup(
     data_files=[
         ('nsescraper',['nsescraper/nifty_indices.pickle','nsescraper/option_indices.pickle','nsescraper/nsescraper.svg']),
     ],
-    install_requires=['pandas','pytz','urllib3'],
+    install_requires=['pandas','pytz','urllib3','python-dateutil'],
     tests_require=['pytest'],
     keywords= ['python','NSE','NIFTY','scraping']
 )

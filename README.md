@@ -41,8 +41,22 @@ pip install nsescraper
 ``` python
 from nsescraper import *
 ```
-
 * **Choose a method:**
+
+To scrap Bulk/Block deals data
+
+``` python
+from nsescraper import Stock
+stock = Stock('usha mart')
+stock.bulk_deals()
+```
+
+To scrap trading reports
+``` python
+from nsescraper import Stock
+stock = Stock('usha mart')
+stock.trade_reports()
+```
 
 To scrap current days nse index/stock data as 1 minute candle format
 
@@ -83,3 +97,5 @@ historical_index('NIFTY 50')
 ```python
 historical_stock('ABB')
 ```
+
+
